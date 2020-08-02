@@ -69,7 +69,7 @@ class BPE(object):
         self.cache = {}
 
     def process_lines(self, filename, outfile, dropout=0, num_workers=1):
-
+        num_workers = os.cpu_count() if num_works == -1  else num_workers 
         if sys.version_info < (3, 0):
             print("Parallel mode is only supported in Python3.")
             sys.exit(1)

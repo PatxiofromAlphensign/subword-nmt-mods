@@ -7,12 +7,48 @@ import inspect
 import warnings
 import argparse
 import codecs
+import configparser
 
 from collections import Counter
 
 # hack for python2/3 compatibility
 from io import open
 argparse.open = open
+
+class filterwarnings(object):
+    def __init__(self, stat, cat):
+        super(filterwarnings, self).__init__()
+        self.ignore = warnings.filterwarnings
+        self.stat = stat
+        self.cat = cat
+
+    def __enter__(self):
+        self.ignore('ignore' if self.stat else 'default', category=self.cat)
+    def __exit__(self, a,b,c):
+        pass
+
+
+
+def save_configFromArgs(args):
+
+    absfile = (os.path.abspath(__file__))
+
+    
+    config = configparser.ConfigParser()
+   
+    path  = os.path.join('/'.join(absfile.split('/')[:-1]), 'config.ini')
+    
+    with open(path, 'w') as w:
+        config['test'] = {}
+        cfg = dict()
+        for var in vars(args):
+            cfg[var] = getattr(create_parser(), var)
+            
+            config['test'][var]  = str(cfg[var])
+
+
+        config.write(w)
+        print('saved to %s' % path)
 
 def create_parser(subparsers=None):
 
@@ -50,33 +86,6 @@ def get_vocab(train_file, vocab_file):
         vocab_file.write(key+" "+ str(f) + "\n")
 
 if __name__ == "__main__":
+    save_configFromArgs(create_parser())
 
-    currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-    newdir = os.path.join(currentdir, 'subword_nmt')
-    if os.path.isdir(newdir):
-        warnings.simplefilter('default')
-        warnings.warn(
-            "this script's location has moved to {0}. This symbolic link will be removed in a future version. Please point to the new location, or install the package and use the command 'subword-nmt'".format(newdir),
-            DeprecationWarning
-        )
 
-    # python 2/3 compatibility
-    if sys.version_info < (3, 0):
-        sys.stderr = codecs.getwriter('UTF-8')(sys.stderr)
-        sys.stdout = codecs.getwriter('UTF-8')(sys.stdout)
-        sys.stdin = codecs.getreader('UTF-8')(sys.stdin)
-    else:
-        sys.stderr = codecs.getwriter('UTF-8')(sys.stderr.buffer)
-        sys.stdout = codecs.getwriter('UTF-8')(sys.stdout.buffer)
-        sys.stdin = codecs.getreader('UTF-8')(sys.stdin.buffer)
-
-    parser = create_parser()
-    args = parser.parse_args()
-
-    # read/write files as UTF-8
-    if args.input.name != '<stdin>':
-        args.input = codecs.open(args.input.name, encoding='utf-8')
-    if args.output.name != '<stdout>':
-        args.output = codecs.open(args.output.name, 'w', encoding='utf-8')
-
-    get_vocab(args.input, args.output)
